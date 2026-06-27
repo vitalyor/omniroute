@@ -1,5 +1,5 @@
 name: web-omniroute
-version: 1.0.0
+version: 1.0.1
 description: "OmniRoute web search + content extraction gateway — proxies all search/extract requests through OmniRoute with its provider fallback chains. Requires OMNIROUTE_URL and OMNIROUTE_SEARCH_API_KEY."
 author: custom
 kind: backend
