@@ -6,9 +6,7 @@ giving Hermes access to OmniRoute's multi-provider search and fetch backends.
 Configuration (in .env)::
 
     OMNIROUTE_URL=http://192.168.10.210:20129
-    OMNIROUTE_SEARCH_API_KEY=***
-
-To use, set in config.yaml::
+    OMNIROUTE_SEARCH_API_KEY=*** use, set in config.yaml::
 
     web:
       backend: omniroute
@@ -27,11 +25,16 @@ logger = logging.getLogger(__name__)
 def _patch_web_tools() -> None:
     """Monkey-patch Hermes' web tool backend resolution to accept 'omniroute'.
 
-    ``tools.web_tools._get_backend()`` only recognizes a hardcoded set of
-    provider names.  Without this patch, ``web.backend: omniroute`` is ignored
-    and falls through to the env-var cascade.  Also patches
-    ``_is_backend_available`` so the per-capability override path
-    (``web.search_backend`` / ``web.extract_backend``) works.
+    Without these patches, ``web.backend: omniroute`` is ignored because
+    ``tools.web_tools`` only recognises a hardcoded set of provider names.
+
+    Three functions are patched:
+
+    * ``_get_backend`` — returns ``"omniroute"`` when configured
+    * ``_is_backend_available`` — returns ``True`` when ``OMNIROUTE_URL``
+      and ``OMNIROUTE_SEARCH_API_KEY`` are both set
+    * ``check_web_api_key`` — the gate that decides whether the
+      ``web_search`` / ``web_extract`` tools are visible to the agent
 
     The patch runs every time the plugin loads (i.e. every Hermes restart)
     and does not modify any source files — it survives upgrades.
@@ -72,6 +75,9 @@ def _patch_web_tools() -> None:
         wt._is_backend_available = _patched_is_available
 
         # ---- check_web_api_key --------------------------------------------
+        # This is the gate that controls whether web_search/web_extract
+        # appear in the agent's toolset. Without this patch the agent
+        # will never see the tools even when all other patches are in place.
         _orig_check_key = wt.check_web_api_key
 
         def _patched_check_key() -> bool:
@@ -84,7 +90,7 @@ def _patch_web_tools() -> None:
 
         wt.check_web_api_key = _patched_check_key
 
-        logger.info("OmniRoute: patched web tool backend resolution")
+        logger.info("OmniRoute: patched web tool backend resolution (get_backend, is_available, check_api_key)")
     except Exception as exc:
         logger.warning("OmniRoute: failed to patch web tools (%s)", exc)
 
